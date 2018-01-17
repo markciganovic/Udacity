@@ -1,0 +1,94 @@
+PRAGMA PAGE_SIZE;
+PRAGMA PAGE_COUNT;
+
+SELECT COUNT(*) 
+FROM (SELECT DISTINCT(uid) 
+   FROM nodes 
+   UNION SELECT DISTINCT(uid) 
+   FROM ways);
+
+SELECT COUNT(*) FROM nodes;
+
+SELECT COUNT(*) FROM ways;
+
+SELECT key, COUNT(*) 
+FROM nodes_tags 
+GROUP BY key 
+ORDER BY COUNT(*) DESC
+LIMIT 25;
+
+SELECT value, COUNT(*) 
+FROM nodes_tags 
+WHERE key = "leisure" 
+GROUP BY value 
+ORDER BY COUNT(*) DESC;
+
+SELECT value, COUNT(*) 
+FROM nodes_tags 
+WHERE id IN (SELECT id 
+   FROM nodes_tags 
+   WHERE value = "sports_centre") 
+AND key = "name" 
+GROUP BY value 
+ORDER BY COUNT(*) DESC;
+
+SELECT value, COUNT(*) 
+FROM nodes_tags 
+WHERE key = "amenity" 
+GROUP BY value 
+ORDER BY COUNT(*) DESC
+LIMIT 20;
+
+
+SELECT DISTINCT(value)
+FROM nodes_tags 
+WHERE id IN (SELECT id 
+   FROM nodes_tags 
+   WHERE value = "restaurant" 
+   OR value = "fast_food") 
+AND key = "name" 
+ORDER BY value;
+
+
+SELECT DISTINCT(n.value) as name, c.value as cuisine
+FROM (SELECT id, key, value 
+   FROM nodes_tags 
+   WHERE id IN (SELECT id 
+      FROM nodes_tags 
+      WHERE value = "restaurant" 
+      OR value = "fast_food") 
+      AND key = "name") as n
+INNER JOIN (SELECT id, key, value 
+   FROM nodes_tags 
+   WHERE id IN (SELECT id 
+      FROM nodes_tags 
+      WHERE value = "restaurant" OR value = "fast_food") 
+      AND key = "cuisine") as c
+ON n.id = c.id
+ORDER BY name;
+
+
+SELECT l.name
+FROM (SELECT DISTINCT(n1.value) as name
+   FROM (SELECT id, key, value 
+      FROM nodes_tags 
+      WHERE id IN (SELECT id FROM nodes_tags WHERE value = "restaurant" OR value = "fast_food") 
+      AND key = "name") as n1
+   INNER JOIN (SELECT id, key, value 
+      FROM nodes_tags 
+      WHERE id IN (SELECT id FROM nodes_tags WHERE value = "restaurant" OR value = "fast_food")) as c1
+   ON n1.id = c1.id) as l
+LEFT JOIN (SELECT DISTINCT(n2.value) as name
+   FROM (SELECT id, key, value 
+      FROM nodes_tags 
+      WHERE id IN (SELECT id FROM nodes_tags WHERE value = "restaurant" OR value = "fast_food") 
+      AND key = "name") as n2
+   INNER JOIN (SELECT id, key, value 
+      FROM nodes_tags 
+      WHERE id IN (SELECT id FROM nodes_tags WHERE value = "restaurant" OR value = "fast_food") 
+      AND key = "cuisine") as c2
+   ON n2.id = c2.id) as r
+ON l.name = r.name
+WHERE r.name IS NULL
+ORDER BY l.name;
+

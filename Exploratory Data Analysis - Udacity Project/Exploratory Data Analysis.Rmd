@@ -1,0 +1,222 @@
+---
+title: "Project 5"
+author: "Mark Ciganovic"
+date: "August 26, 2017"
+output:
+  html_document: default
+---
+
+### The Analysis of the Quality of Red Wines Based Upon Their Chemical Constituents
+
+Introduction:  This paper will analyze the quality (score between 0 and 10) of red wine based upon certain attributes.  These attributes are fixed acidity (tartaric acid - g / dm^3), volatile acidity (acetic acid - g / dm^3), citric acid (g / dm^3), residual sugar (g / dm^3), chlorides (sodium chloride - g / dm^3, free sulfur dioxide (mg / dm^3), total sulfur dioxide (mg / dm^3), density (g / cm^3), pH, sulphates (potassium sulphate - g / dm3), and alcohol (% by volume).  The dataset consists of 1599 records for analysis in which no row(instance) has missing information for any column(attribute).  The way to understand the dataset is to see quality as the output or dependent variable, whereas the eleven attributes are the input or independent variables that affect quality.
+<br/> <br/>  
+
+### Data Processing
+
+The steps in processing the data in list form  
+<br/> 
+1. Download the file from link provided, along with all the necessary libraries for the analysis.  
+
+```{r, message = FALSE, warning = FALSE}
+fileURL <- "https://s3.amazonaws.com/udacity-hosted-downloads/ud651/wineQualityReds.csv"
+if (!file.exists("wineQualityReds.csv")){
+  download.file(fileURL, "wineQualityReds.csv")
+}
+library(tidyverse)
+library(corrplot)
+library(gridExtra)
+library(moments)
+```
+<br/> <br/> 
+2. Read the file into a dataset called winedata, setting all the attributes to proper data type.  
+
+```{r, message = FALSE, warning = FALSE }
+winedata <- read_csv("wineQualityReds.csv", col_types = "_dddddddddddi")
+options(digits=2, tibble.width = Inf, tibble.print_max = Inf)
+```  
+<br/> <br/> <br/>
+
+### Data Analysis - Stream of Consciousness Analysis
+<br/>
+1. Univariate Analysis:  I will analyze the quality variable by both using a bar graph and descriptive statistics. 
+    
+```{r fig.height=2.5, fig.width=5}
+ggplot(aes(x = quality), data = winedata) + geom_bar()
+winedata %>% group_by(quality) %>% summarise(n = n())
+```
+<br/>
+The univariate analysis for the output / dependent variable was based upon the attribute of quality.  The boxplot shows the distribution of qualities follows a normal distribution / bell curve, in which the curve is a very steep one. showing that most of the samples are in the middle, with few at the edges, and none at the extreme edges of 0,1,2,9, and 10.  The descriptive statistics of the quality attribute also confirm this with greater specificity.
+<br/> <br/> 
+
+
+```{r fig.height=10, fig.width=10}
+h <- Map(function(variable, names){
+  return(ggplot(aes(x = variable), data = winedata) + geom_histogram(bins = 30) +
+           xlab(names))}, select(winedata, -quality), names(winedata)[1:11])
+grid.arrange(grobs = h, top = "Histograms of Wine Attributes")
+```
+
+```{r}
+winedata %>% gather(attribute, value, 1:11) %>% group_by(attribute) %>% 
+  summarise(min = min(value), 
+                       first_quantile = quantile(value, .25),
+                       median = median(value),
+                       mean = mean(value),
+                       third_quantile = quantile(value, .75),
+                       max = max(value), skew = skewness(value))
+```
+<br/>
+The univariate analysis for the input / independent variables was based upon the attributes of fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, and alcohol.  The histograms show the distribution of qualities follow a normal distribution / bell curve for the attributes of density and pH, and a positive skew for all of the other attributes.  The descriptive statistics of the input variable attributes also confirm this with greater specificity.
+<br/> <br/> 
+
+2. Bivariate Analysis:  I will analyze each of the eleven attributes by a density plot based upon quality, a boxplot grouped by quality, and then summary statistics grouped by quality.
+
+```{r fig.height=10, fig.width= 10}
+d <- Map(function(variable, names){
+  return(ggplot(aes(x = variable), data = winedata) + 
+           geom_density(aes(group = quality, color = factor(quality), 
+                            fill = factor(quality)), alpha = 0.3) +
+           labs(y  = "density of values", x = names, color = "quality", 
+                fill = "quality") +
+           scale_colour_brewer(palette = "Spectral") +  
+           scale_fill_brewer(palette = "Spectral"))}, select(winedata, -quality), 
+  names(winedata)[1:11])
+grid.arrange(d[[1]] + theme(legend.position = "none"), 
+             d[[2]] + theme(legend.position = "none") + ylab(NULL), 
+             d[[3]] + ylab(NULL), d[[4]] + theme(legend.position = "none"), 
+             d[[5]] + theme(legend.position = "none") + ylab(NULL), 
+             d[[6]] + ylab(NULL), d[[7]] + theme(legend.position = "none"), 
+             d[[8]] + ylab(NULL) + theme(legend.position = "none"), 
+             d[[9]] + ylab(NULL), d[[10]] + theme(legend.position = "none"), 
+             d[[11]] + ylab(NULL), 
+             top = "Density Plots (Independent Variables based upon Quality)")
+```
+<br/>
+For the first bivariate analysis, I have chosen to take all of the density plots, and place them in a grid.  This way we can easily view the different input variables and see how they affect the quality variable.  From determining correlations of variables based upon density plots, I woul say that the variables that correlate positively with quality are fixed acidity, citric acid, sulphates, and alcohol.  The attributes that negatively correlate with quality are volatile acidity, density, and pH.  The attributes that seem to have very little correlation with quality are residual sugar, chlorides, free sulfur dioxide, and total sulfur dioxide.  I am taking into consideration that basing off of visualizing does add a strong subjective element, so others might disagree with me.  I need to bracket this out of my mind when making a judgement for the next set of plots.
+<br/>
+
+  
+```{r fig.height=10.0, fig.width=10.0}
+b <- Map(function(variable, names){
+  return(ggplot(aes(x = factor(quality), y = variable), data = winedata) + 
+           geom_boxplot() + labs(x = "quality", y = names))}, 
+  select(winedata, -quality), names(winedata)[1:11])
+grid.arrange(grobs = b, 
+             top = "Box Plots (Independent Variables based upon Quality)")
+```
+
+<br/>
+For the second bivariate analysis,  I have chosen to take all of the box plots, and place them in a grid.  This way we can easily view the different input variables and see how they affect the output variable of quality.  From determining correlations of variables based upon the box plots, I would say that the variables that correlate positively with quality are citric acid, sulphates, and alcohol.  The attributes that negatively correlate with quality are volatile acidity, density, and pH.  The attributes that seem to have very little correlation with quality are fixed acidity, residual sugar, chlorides, free sulfur dioxide, and total sulfur dioxide.  I am taking into consideration that basing off of visualizing does add a strong subjective element, so others might disagree with me.
+<br/> 
+
+```{r}
+winedata %>% gather(attribute, value, 1:11) %>% group_by(attribute, quality) %>% 
+  summarise(min = min(value), 
+            first_quantile = quantile(value, .25), 
+            median = median(value), 
+            mean = mean(value),  
+            third_quantile = quantile(value, .75), 
+            max = max(value))
+```
+<br/>
+For the third bivariate analysis, I have decided to create a table of summary statistics for all of the independent variables grouped by quality.  This will help to add specificity to the information obtained from the plots.
+<br/> <br/> 
+
+3.  Corrplot of Variables:  I will create a plot that has all of the correlation coefficients of all of the variables related to all of the other variables.
+
+```{r fig.height= 10, fig.width= 10}
+corrplot(cor(winedata), method = "color", addCoef.col="black", number.cex = .75, 
+         title = "Correlation Coefficient Table", mar=c(0,0,1,0))
+```
+</br/>
+In this section, I used the correlation plot to check my interpretation of the previous two set of graphs, I find that the three most strongly postively correlated variables with quality were those that I noticed a correlation on both set of graphs.  These are alcohol at a .48, sulphates at a .25, and citric acid at a .23.  The next variable as far as positive correlation would be fixed acidity at .12, which I saw a correlation on the density plots, but not on the boxplots with quality.  The next in order from positive to negative would be residual sugar at .01, which I saw no correlation on either set of graphs with quality, then free sulfur dioxides at -.05, which I saw no correlation on either set of graphs with quality, and pH at a -.06, which I saw a negative correlation on both graphs with quality.  So far this seems to be the only outlier on my perception of the graphs as far as correlation is concerned.  The next attribute of chlorides correlates with quality at -.13, I saw no correlation in either graph.  The next attribute of density correlates with quality at -.17, I saw a negative correlation on both graphs, but the next attribute of total sulfur dioxides correlates with quality at -.19, I saw no correlation on either graph.   The last variable, which is volatile acidity correlates with quality at -.39, which had a noticeable negative correlation on both graphs.  This shows that my visualizing the ranking of correlations were mostly correct, but with a few outliers.  This is why I checked my results using a correlation plot.
+<br/> <br/> 
+
+4. Multivariate Analysis:  I will select certain attributes to see how they correlate with each other, and how these two correlate with quality.  The attributes that I will select are fixed acidity, volatile acidity, citric acid, alcohol, chlorides, and residual sugar.
+
+```{r, fig.height=2.5, fig.width= 10.0, results = "hide"}
+s <- Map(function(x_variable, y_variable, x_names, y_names){
+  return(ggplot(aes(x = x_variable, y = y_variable), data = winedata) + 
+           geom_jitter(aes(color = factor(quality)), alpha = .5) + 
+           labs(color = "quality") +
+           scale_colour_brewer(palette = "Spectral") +  
+           scale_fill_brewer(palette = "Spectral") + 
+           labs(x = x_names, y = y_names))}, 
+  winedata[,c(1,3,3,11,11)], winedata[, c(2,2,1,5,4)], 
+  names(winedata)[c(1,3,3,11,11)], names(winedata)[c(2,2,1,5,4)])
+
+w <-  Map(function(x_variable, y_variable, x_names, y_names){
+  return(ggplot(aes(x = x_variable, y = y_variable), data = winedata) + 
+           geom_jitter(alpha = .3) + facet_wrap(~quality) + 
+           labs(x = x_names, y = y_names))}, 
+  winedata[,c(1,3,3,11,11)], winedata[, c(2,2,1,5,4)], 
+  names(winedata)[c(1,3,3,11,11)], names(winedata)[c(2,2,1,5,4)])
+
+Map(function(w, s){
+  return(grid.arrange(w, s, ncol = 2))}, w, s)
+
+```
+<br/><br/>
+These graphs are rather interesting in that they show a relationship between the different types of acids, and how they impact quality.  This is what I will develop further in the section titled, Data Analysis - Final Plots and Summaries.  Also, I found it interesting that there is a greater negative correlation between alcohol and chlorides as opposed to alcohol and sugar.  I thought the fermentation process would indicate that latter two are more negatively correlated than the former.  Why this is not the case, and why there is a greater negative correlation between alcohol and chlorides compared to alcohol and sugar would be a topic for further research, and an initial guess might be due to the quality of the grapes that one uses for wine.
+<br/> <br/><br/>
+
+### Data Analysis - Final Plots and Summaries 
+<br/>
+For my final plots and summaries, I have decided to select three graphs that deal with the relationships between the different types of acids and how they impact quality.  The information presented in the stream of consciousness part of the paper shows that quality seems to be positively impacted by the tart taste of fixed acidity (tartatic acid), and the citrusy taste of citric acid, while being negatively impacted by volatile acidity (acetic acid).  Acetic acid is the component that gives vinegar the vinegar type taste, so I could see how that negatively impacts the taste of wine.
+<br/><br/>
+1.  Scatter plot of volatile acidity (acetic acid) vs fixed acidity (tartaric acid)
+
+```{r fig.height= 3.5, fig.width= 7}
+s[[1]] + labs(y  = "volatile acidity (acetic acid - g / dm^3)", 
+          x = "fixed acidity (acetic acid - g / dm^3)",
+          title = "volatile acidity vs fixed acidity")
+```
+<br/>
+For my first final plot, it shows that there is a negative correlation between fixed acidity and acetic acid, with higher concentrations of acetic acid leading to lower quality wines, and higher concentrations of tartaric acid leading to higher quality wines.  The issue now would be to isolate the chemical process responsible for the production and breakdown of specific acids.
+<br/> <br/>
+
+2.  Scatter plot of volatile acidity (acetic acid) vs citric acid
+
+```{r fig.height= 3.5, fig.width= 7}
+s[[2]] + labs(y  = "volatile acidity (acetic acid - g / dm^3)", 
+          x = "citric acid - g / dm^3",
+          title = "volatile acidity vs citric acid")
+```
+<br/>
+For my second final plot, it shows that there is a negative correlation between fixed acidity and citric acid, with higher concentrations of acetic acid leading to lower quality wines, and higher concentrations of citric acid leading to higher quality wines.  The issue now would be to isolate the chemical process responsible for the production and breakdown of specific acids.
+<br/> <br/>
+
+3.  Scatter plot of fixed acidity (tartaric acid) vs citric acid
+
+```{r fig.height= 3.5, fig.width= 7}
+s[[3]] + labs(y  = "fixed acidity (tartaric acid - g / dm^3)", 
+          x = "citric acid - g / dm^3",
+          title = "fixed acidity vs citric acid")
+```
+<br/>
+For my third final plot, it shows that there is a positive correlation between tartaric acid and citric acid, with higher concentrations of tartaric acid leading to higher quality wines, and higher concentrations of citric acid leading to higher quality wines.  The issue now would be to isolate the chemical process responsible for the production and breakdown of specific acids.
+<br/> <br/>
+
+There is definitely an interesting relationship between the three types of acids,and how they impact quality.  It makes sense that fixed acidity and citric acid would positively affect quality, since the tart taste of fixed acidity, which is tartaric acid would probably give a slight tart taste to wine, and citric acid would give that slight citrusy sour taste to the wine, which could be seen as adding a desired flavor.  It also makes sense that volatile acidity, which is acetic acid would negatively impact the quality of wine, since it has that vinegar quality taste which is not something that someone would want in their wine.
+<br/><br/><br/>
+
+4. Linear Model of Quality based upon other variables:  Here I will create a linear model of the eleven attributes and how they relate to quality, which will be expressed as a function of how quality relates to all of the variables.
+
+```{r}
+model <- lm((quality ~ .), data = winedata)
+formula <- formula(model)
+as.formula(
+  paste0("quality ~ ", round(coefficients(model)[1],2), "", 
+    paste(sprintf(" %+.2f*%s ", 
+                  coefficients(model)[-1],  
+                  names(coefficients(model)[-1])), 
+          collapse="")))
+```
+<br/>
+I decided to finish by creating a linear model of the function by which the dependent variable, which is quality depends on specific values of all the independent variables.  There is something that strikes me as odd, and that is why a variable like total sulfur dioxide, which correlates at a -.19 on the correlation graph has a 0 coefficient for the linear model, whereas residual sugar which correlates with a .01 on the correlation plot has a .02 coefficient on the regression model. This is interesting, and something for me to think about when it comes to more detailed analyses. 
+<br/><br/><br/>
+
+#### Reflection
+As I reflect upon the process of developing my analyses, I first would like to explain some of the learning process.  First, when I visualized the variables in histograms, I found the uneven distribution a problem for getting insights from the data.  This is where I discovered the density plot, and how it overcomes this problem.  The decision to make boxplots for the variables was an easy one.  I remember the ggally library from the coursework, but it always crashed, so I looked for something like that, but I found something better, and that was corrplot.  I wanted to add the linear model, because this is where further work should be done.  The visualizations should be used more for general insights, and you can get descriptive statistics by using the dplyr library.  It is in the linear model that you can get predictive power.  I realize that to do that I will need to split data into a test set, and training set, and then train a linear model based upon a training set, and test it on the test set.  I see that this is done in another course in the data analysis curriculum, so I will hold off on that type of analysis for that course.  As far as the results are concerned, it was interesting to see the attributes that raise the quality of wine, as opposed to those that have no effect, and those that have a negative effect.  It seems that alcohol has the strongest positive affect on quality, this could be understood as more of a smooth taste that comes from alcohol as opposed to grape juice.  As far as the tastes are concerned, quality is increased from the smooth taste of alcohol, the tart taste of tartaric acid, the citrusy sour taste of citric acid.  The tastes that decrease quality would be the vinegar type taste of acetic acid, and the salt taste of chlorides.  The taste that seem to have little impact on quality is that of sugar.  This is good in that it seems there is no bias to either sweet or dry wines. Given what I specifically focused on, it would be interesting to go into the chemical processes dealing with the three types of acids.  The next analysis would be the relation of sulphates to fixed acidity, volatile acidity, and citric acid.  Sulphates are used as a preserver of some sort to stop certain chemical processes from taking place.  I would analyze the relation between sulphates and these three acids.  After that I would analyze sulphates in relation to free and total sulfur dioxide.  
+
+
